@@ -1,0 +1,378 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": ""
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3e1f5942-2e07-445b-9483-b24fb92168af",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fELInQV5u9J8omZT",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an assistant for a 3D printing quotation system.\n\nThe STL file has already been analyzed and the cost has been calculated by the system.\n\nUse the data provided below to generate a professional quotation email.\n\nSurface Area: {{$json.surface_area_mm2}} mm²\nVolume: {{$json.volume_cm3}} cm³\nMaterial: {{$json.material}}\nEstimated Cost: ₹{{$json.cost}}\n\nWrite a short professional email to the customer including the above information.\n\nDo not recalculate anything.\nDo not change the cost.\nJust present the result clearly.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a professional email assistant.  Write a polite and professional reply to this email.  Subject: {{$json[\"subject\"]}}  Email: {{$json[\"snippet\"]}}  Keep the reply clear, helpful and professional."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "656e88eb-ad39-4476-a09a-5419f70069af",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "56df513b-2415-4475-90e6-2319cd32ea19",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "RWjhVzpmDrgA5Vds",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$node[\"Gmail Trigger\"].json[\"from\"][\"value\"][0][\"address\"]}}",
+        "subject": "=Re: {{$node[\"Gmail Trigger\"].json[\"subject\"]}}",
+        "emailType": "text",
+        "message": "={{$json[\"text\"]}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "571bced8-86a1-4e88-91da-6193251f03b7",
+      "name": "Send a message",
+      "webhookId": "ead090b2-439f-49d1-a87c-fdac42a0b448",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fELInQV5u9J8omZT",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "99385f32-0302-41c3-8d50-a14f03822ebe",
+              "name": "sender",
+              "value": "={{$json.From.match(/<(.*)>/)[1]}}",
+              "type": "string"
+            },
+            {
+              "id": "1d45e234-5346-4ce3-bdab-0faec235efdf",
+              "name": "filename",
+              "value": "={{ $binary[Object.keys($binary)[0]].fileName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "630e6cd6-e62c-4339-a411-3c8d139535fc",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6a629e7f-2503-4070-b788-f34dc609f965",
+              "leftValue": "={{Object.keys($binary).length}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d89ea521-6971-47a2-8d4a-79274c986b7a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.from.value[0].address}}",
+        "subject": "File required for 3D printing Quote",
+        "emailType": "text",
+        "message": "Dear Customer,  Thank you for contacting us.  To generate a 3D printing quotation, please attach your 3D model file (STL, STEP, or OBJ format) in your reply.  Once we receive the file, we will analyze it and send the quotation.  Best regards, Zeal 3D Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        144
+      ],
+      "id": "d0be153c-4daf-4d68-9eb8-276e9da3c934",
+      "name": "Send a message1",
+      "webhookId": "6b89f1c4-5b4e-4ccb-b366-3bb2db5fc6b7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fELInQV5u9J8omZT",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/analyze",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "={{ Object.keys($binary)[0] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "da4dd619-c9a7-454c-91cc-4754c8da24bc",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "Add field to aggregate"
+            },
+            {
+              "fieldToAggregate": "file_name"
+            },
+            {
+              "fieldToAggregate": "surface_area_mm2"
+            },
+            {
+              "fieldToAggregate": "volume_cm3"
+            },
+            {
+              "fieldToAggregate": "material"
+            },
+            {
+              "fieldToAggregate": "cost"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "404da40b-c782-40b4-bd6e-23259fe28c0e",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const binaryData = $input.item.binary || {};\nconst items = [];\n\nfor (const key of Object.keys(binaryData)) {\n  items.push({\n    json: {\n      attachment: key\n    },\n    binary: {\n      file: binaryData[key]\n    }\n  });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "f062c7f7-d200-43de-915a-a5939d760c2b",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "a40febd3-2607-4729-a3d6-270ffa8eba4d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d28054c8ed168827b3859d1db15fe62d6949e71c8cee7fbbe1ed95ee95639f11"
+  },
+  "id": "lyduTN9bONk0MyT5",
+  "tags": []
+}
